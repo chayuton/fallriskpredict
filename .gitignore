@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+# data, outputs and trained models (keep them out of git)
+data/
+data_demo/
+results/
+results_demo/
+models/
+models_demo/
+*.keras
+*.h5
+*.tflite
+*.task
+*.csv
+*.parquet

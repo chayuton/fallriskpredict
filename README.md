@@ -14,6 +14,26 @@
 | `make_demo_data.py` | สร้างข้อมูลจำลองไว้ทดลองรันเท่านั้น (ตัวเลขที่ได้ไม่มีความหมาย) | – |
 | `prepare_open_data.py` | แปลงชุดข้อมูลเปิด (OmniFall: UP-Fall, CMDFall, CAUCAFall, Le2i, GMDCSA24 …, URFD) เป็น frames.csv / trials.csv ดู **README_open_data.md** | R1 ข้อ 1, R2 ข้อ 1, 4 |
 
+## เว็บแอป (https://fallriskpredict.vercel.app)
+
+อัปโหลด `frames.csv`, `trials.csv` และไฟล์ค่าทำนายของ GRU (`oof_predictions.csv` จาก `loso.py` หรือไฟล์ที่มีคอลัมน์ `p_pos`) แล้วตั้งค่ากฎตัดสินใจ เว็บจะคำนวณให้ทันที
+- KPI, histogram ของ lead time, ตารางแยกตามสถานการณ์
+- ตาราง ablation พร้อม McNemar test
+- heatmap ความไวของ threshold, กราฟ trade-off และการเลือก threshold แบบ LOSO
+- กราฟไทม์ไลน์ตัวอย่าง และข้อความสรุปภาษาอังกฤษสำหรับบทความ
+- ดาวน์โหลดผลเป็น CSV / JSON ได้
+
+เบราว์เซอร์ตัดเหลือเฉพาะคอลัมน์ที่ใช้ (subject/video/frame, timestamp, lm11/12/23/24) แล้วบีบอัดก่อนส่ง ขนาดหลังบีบอัดต้องไม่เกิน 4.3 MB (ประมาณ frames.csv ดิบ 100 MB) เซิร์ฟเวอร์ประมวลผลในหน่วยความจำและไม่เก็บไฟล์ ปุ่ม "ลองกับข้อมูลจำลอง" ใช้ดูรูปแบบผลลัพธ์ได้โดยไม่ต้องมีไฟล์
+
+| ส่วน | ไฟล์ |
+|---|---|
+| หน้าเว็บ | `public/index.html`, `public/app.js`, `public/style.css` |
+| API วิเคราะห์ | `api/analyze.py` (POST ไฟล์, GET `?demo=1`) → `webapp/analysis.py` (ใช้ `decision.py` ตัวเดียวกับสคริปต์) |
+| self-test | `api/selftest.py` |
+| ทดสอบ | `python tests/test_webapp.py` |
+
+การ train GRU และการดึง landmark ด้วย MediaPipe ยังต้องรันบนเครื่องของคุณ (TensorFlow ใหญ่เกินที่ Vercel รับได้) Vercel ติดตั้งแค่ `requirements.txt` (numpy, pandas) ส่วนสคริปต์ทั้งหมดใช้ `requirements-full.txt` push ขึ้น `main` แล้ว Vercel จะ deploy production ให้อัตโนมัติ
+
 ติดตั้ง: `pip install -r requirements-full.txt` (โค้ดทดสอบแล้วกับ Python 3.13, TensorFlow 2.21 / Keras 3, MediaPipe 0.10.32)
 
 ---

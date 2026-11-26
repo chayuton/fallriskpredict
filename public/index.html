@@ -3,63 +3,123 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>fallriskpredict – evaluation toolkit</title>
-<style>
-  :root { --fg:#1d2433; --muted:#5b6478; --line:#e3e6ec; --ok:#1f7a4d; --bad:#b3261e; --bg:#fafbfc; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif; color:var(--fg); background:var(--bg); line-height:1.6; }
-  main { max-width: 860px; margin: 0 auto; padding: 48px 20px 64px; }
-  h1 { font-size: 1.7rem; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 32px; }
-  h2 { font-size: 1.1rem; margin: 36px 0 12px; }
-  table { width:100%; border-collapse: collapse; font-size: .95rem; background:#fff; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font-weight:600; }
-  code { background:#eef0f4; padding:1px 5px; border-radius:4px; font-size:.9em; }
-  button { font: inherit; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--fg); background: var(--fg); color:#fff; cursor:pointer; }
-  button:disabled { opacity:.5; cursor: default; }
-  #status { margin-left: 10px; font-weight:600; }
-  .ok { color: var(--ok); } .bad { color: var(--bad); }
-  pre { background:#fff; border:1px solid var(--line); padding:12px; overflow:auto; font-size:.85rem; max-height: 360px; }
-  a { color: inherit; }
-</style>
+<title>fallriskpredict – วิเคราะห์ผลการตรวจจับการล้ม</title>
+<link rel="stylesheet" href="/style.css">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="/app.js" defer></script>
 </head>
 <body>
-<main>
-  <h1>fallriskpredict</h1>
-  <p class="sub">ชุดสคริปต์ประเมินผลระบบตรวจจับการเสียสมดุล/การล้ม (MediaPipe + GRU + กฎ persistence + ความเร็วสะโพก) สำหรับตอบความเห็นผู้ทรงคุณวุฒิ</p>
+<header>
+  <div class="wrap">
+    <h1>fallriskpredict</h1>
+    <p>วิเคราะห์ lead time, false alarm และ ablation ของกฎตัดสินใจ (GRU + persistence + ความเร็วสะโพก) จากไฟล์ผลของคุณ</p>
+  </div>
+</header>
 
-  <h2>ทดสอบความพร้อมของระบบ</h2>
-  <p>รันกฎตัดสินใจและการคำนวณ lead time บนข้อมูลจำลองบนเซิร์ฟเวอร์ (ไม่ใช้ TensorFlow: ใช้ label เป็นค่า GRU จึงทดสอบเส้นทางของโค้ด ไม่ใช่ความแม่นยำของโมเดล)</p>
-  <button id="run">รัน self-test</button><span id="status"></span>
-  <pre id="out" hidden></pre>
+<main class="wrap">
+  <section class="card">
+    <h2>1. ไฟล์ข้อมูล</h2>
+    <div class="files">
+      <label class="file">
+        <span class="lbl">frames.csv <em>landmark ราย frame</em></span>
+        <input type="file" id="f-frames" accept=".csv,text/csv">
+        <small>ต้องมี subject_id, video_id, frame_idx และ lm11/12/23/24 (x, y, v) ระบบอ่านเฉพาะคอลัมน์ที่ใช้</small>
+      </label>
+      <label class="file">
+        <span class="lbl">trials.csv <em>ข้อมูลการทดลอง</em></span>
+        <input type="file" id="f-trials" accept=".csv,text/csv">
+        <small>video_id, trial_type (fall/adl), impact_frame; ไม่บังคับ: scenario, onset_frame, trial_id, start_frame, end_frame</small>
+      </label>
+      <label class="file">
+        <span class="lbl">predictions.csv <em>ค่าทำนายของ GRU</em></span>
+        <input type="file" id="f-preds" accept=".csv,text/csv">
+        <small>oof_predictions.csv จาก loso.py (prob_*) หรือไฟล์ที่มีคอลัมน์ p_pos</small>
+      </label>
+    </div>
+    <div id="pos-box" class="pos" hidden>
+      <span class="lbl">คลาสที่นับเป็นสัญญาณเตือน:</span> <span id="pos-list"></span>
+    </div>
+  </section>
 
-  <h2>สคริปต์</h2>
-  <table>
-    <tr><th>ไฟล์</th><th>หน้าที่</th></tr>
-    <tr><td><code>loso.py</code></td><td>LOSO / video-independent / random split และตารางเปรียบเทียบ</td></tr>
-    <tr><td><code>lead_time.py</code></td><td>เวลาเตือนล่วงหน้าก่อนกระแทก (ms)</td></tr>
-    <tr><td><code>ablation.py</code></td><td>ablation ของกฎเสริม, ความไวของ threshold, เลือก threshold แบบ LOSO</td></tr>
-    <tr><td><code>benchmark_edge.py</code></td><td>latency / FPS / RAM บน Raspberry Pi 5 หรือ Jetson</td></tr>
-    <tr><td><code>prepare_open_data.py</code></td><td>แปลงชุดข้อมูลเปิด (OmniFall, URFD) เป็น frames.csv / trials.csv</td></tr>
-  </table>
-  <p>การ train GRU และการดึง landmark ต้องรันบนเครื่องของคุณ: <code>pip install -r requirements-full.txt</code> แล้วดู README ใน <a href="https://github.com/chayuton/fallriskpredict">GitHub</a></p>
+  <section class="card">
+    <h2>2. การตั้งค่ากฎตัดสินใจ</h2>
+    <div class="grid-form">
+      <label>GRU threshold (P)<input id="s-p_thresh" type="number" step="0.05" min="0" max="1" value="0.5"></label>
+      <label>Persistence (N เฟรม)<input id="s-persist" type="number" min="1" max="30" value="3"></label>
+      <label>รวมกฎแบบ
+        <select id="s-persist_on"><option value="gru">gru: N เฟรมของ GRU แล้วเช็คความเร็ว</option><option value="combined">combined: ผ่านทั้งสองเงื่อนไข N เฟรม</option></select>
+      </label>
+      <label>หน่วยความเร็ว
+        <select id="s-velocity_mode"><option value="meters">meters (m/s, ต้องคาลิเบรต)</option><option value="torso">torso (TL/s, ไม่ต้องคาลิเบรต)</option><option value="pixels">pixels (px/s)</option></select>
+      </label>
+      <label>Velocity threshold (V)<input id="s-v_thresh" type="number" step="0.05" min="0" value="1.5"></label>
+      <label>ความสูงภาพจริง (m) <em>meters</em><input id="s-frame_h_meters" type="number" step="0.1" min="0.1" value="2.7"></label>
+      <label>Processing latency (ms)<input id="s-latency_ms" type="number" min="0" max="5000" value="0"></label>
+      <label>FPS<input id="s-fps" type="number" min="1" max="240" value="30"></label>
+      <label>ความกว้าง/สูงภาพ (px)<span class="pair"><input id="s-frame_w" type="number" value="1280"><input id="s-frame_h" type="number" value="720"></span></label>
+    </div>
+    <details>
+      <summary>ค่าขั้นสูง</summary>
+      <div class="grid-form">
+        <label>Velocity lag (เฟรม)<input id="s-vel_lag" type="number" min="1" max="15" value="1"></label>
+        <label>Velocity window (เฟรม)<input id="s-vel_window" type="number" min="1" max="30" value="1"></label>
+        <label>เตือนก่อนกระแทกได้ไม่เกิน (s)<input id="s-max_pre_impact_s" type="number" step="0.1" value="2.0"></label>
+        <label>ยอมให้เตือนก่อน onset (s)<input id="s-onset_tol_s" type="number" step="0.1" value="0.5"></label>
+        <label>เตือนหลังกระแทกได้ไม่เกิน (s)<input id="s-max_post_impact_s" type="number" step="0.1" value="1.0"></label>
+        <label>Refractory (s)<input id="s-refractory_s" type="number" step="0.5" value="5"></label>
+        <label class="chk"><input id="s-grid" type="checkbox" checked> คำนวณ heatmap / เลือก threshold แบบ LOSO</label>
+      </div>
+    </details>
+    <div class="actions">
+      <button id="run" class="primary">วิเคราะห์ไฟล์ของฉัน</button>
+      <button id="demo">ลองกับข้อมูลจำลอง</button>
+      <span id="status" role="status"></span>
+    </div>
+    <p class="note">ไฟล์ถูกตัดเหลือเฉพาะคอลัมน์ที่ใช้และบีบอัดในเบราว์เซอร์ก่อนส่ง เซิร์ฟเวอร์ประมวลผลในหน่วยความจำและไม่เก็บไฟล์ไว้</p>
+  </section>
+
+  <section id="results" hidden>
+    <div id="demo-banner" class="banner" hidden>ผลจากข้อมูลจำลองและ GRU จำลอง ใช้ดูรูปแบบผลลัพธ์เท่านั้น ห้ามนำไปรายงาน</div>
+    <div class="kpis" id="kpis"></div>
+
+    <section class="card">
+      <div class="head"><h2>Lead time ก่อนกระแทก</h2><button class="small" data-dl="per_trial">ดาวน์โหลดผลราย trial (CSV)</button></div>
+      <canvas id="c-hist" height="110"></canvas>
+      <h3>แยกตามสถานการณ์</h3>
+      <div class="table" id="t-scen"></div>
+    </section>
+
+    <section class="card">
+      <div class="head"><h2>Ablation ของกฎตัดสินใจ</h2><button class="small" data-dl="ablation">ดาวน์โหลด (CSV)</button></div>
+      <div class="table" id="t-abl"></div>
+      <p class="note">McNemar: exact, จับคู่ราย trial เทียบกับกฎที่เสนอ</p>
+    </section>
+
+    <section class="card" id="sec-grid">
+      <div class="head"><h2>ความไวของ threshold</h2><button class="small" data-dl="grid">ดาวน์โหลด (CSV)</button></div>
+      <p class="note" id="grid-note"></p>
+      <div class="heatmaps" id="heatmaps"></div>
+      <canvas id="c-trade" height="120"></canvas>
+      <div id="loso-box"></div>
+    </section>
+
+    <section class="card">
+      <div class="head"><h2>ไทม์ไลน์ตัวอย่าง</h2><select id="ex-select"></select></div>
+      <canvas id="c-tl" height="150"></canvas>
+      <p class="note">เส้นแนวตั้งดำ = กระแทก (0 ms), แดง = เตือนครั้งแรก, เทา = onset</p>
+    </section>
+
+    <section class="card">
+      <div class="head"><h2>สรุปสำหรับบทความ</h2><button class="small" data-dl="summary">ดาวน์โหลด JSON</button></div>
+      <pre id="paper"></pre>
+    </section>
+  </section>
 </main>
-<script>
-  const btn = document.getElementById('run'), st = document.getElementById('status'), out = document.getElementById('out');
-  btn.addEventListener('click', async () => {
-    btn.disabled = true; st.className = ''; st.textContent = 'กำลังรัน…'; out.hidden = true;
-    try {
-      const r = await fetch('/api/selftest?subjects=2', { cache: 'no-store' });
-      const j = await r.json();
-      const ok = r.ok && j.status === 'ok';
-      st.className = ok ? 'ok' : 'bad';
-      st.textContent = ok ? `ผ่าน (${j.runtime_s} s)` : 'ไม่ผ่าน';
-      out.textContent = JSON.stringify(j, null, 2); out.hidden = false;
-    } catch (e) {
-      st.className = 'bad'; st.textContent = 'เรียก API ไม่ได้: ' + e;
-    } finally { btn.disabled = false; }
-  });
-</script>
+
+<footer class="wrap">
+  <a href="https://github.com/chayuton/fallriskpredict">GitHub</a> · <a href="/api/selftest">self-test</a> ·
+  การ train GRU และดึง landmark ด้วย MediaPipe ทำบนเครื่องของคุณด้วยสคริปต์ใน repo
+</footer>
 </body>
 </html>

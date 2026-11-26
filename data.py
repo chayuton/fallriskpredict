@@ -21,8 +21,10 @@ def lm(idx: int, axis: str) -> str:
 
 
 def read_table(path) -> pd.DataFrame:
-    path = str(path)
-    if path.endswith(".parquet"):
+    """CSV or Parquet from a path, or CSV from a file-like object (web app)."""
+    if hasattr(path, "read"):
+        return pd.read_csv(path)
+    if str(path).endswith(".parquet"):
         return pd.read_parquet(path)
     return pd.read_csv(path)
 

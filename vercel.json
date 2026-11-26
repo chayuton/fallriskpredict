@@ -4,6 +4,7 @@
   "buildCommand": "",
   "outputDirectory": "public",
   "functions": {
+    "api/analyze.py": { "maxDuration": 60 },
     "api/selftest.py": { "maxDuration": 30 }
   }
 }

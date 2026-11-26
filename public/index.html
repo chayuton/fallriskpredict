@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fallriskpredict – evaluation toolkit</title>
+<style>
+  :root { --fg:#1d2433; --muted:#5b6478; --line:#e3e6ec; --ok:#1f7a4d; --bad:#b3261e; --bg:#fafbfc; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif; color:var(--fg); background:var(--bg); line-height:1.6; }
+  main { max-width: 860px; margin: 0 auto; padding: 48px 20px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 32px; }
+  h2 { font-size: 1.1rem; margin: 36px 0 12px; }
+  table { width:100%; border-collapse: collapse; font-size: .95rem; background:#fff; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight:600; }
+  code { background:#eef0f4; padding:1px 5px; border-radius:4px; font-size:.9em; }
+  button { font: inherit; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--fg); background: var(--fg); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor: default; }
+  #status { margin-left: 10px; font-weight:600; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  pre { background:#fff; border:1px solid var(--line); padding:12px; overflow:auto; font-size:.85rem; max-height: 360px; }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>fallriskpredict</h1>
+  <p class="sub">ชุดสคริปต์ประเมินผลระบบตรวจจับการเสียสมดุล/การล้ม (MediaPipe + GRU + กฎ persistence + ความเร็วสะโพก) สำหรับตอบความเห็นผู้ทรงคุณวุฒิ</p>
+
+  <h2>ทดสอบความพร้อมของระบบ</h2>
+  <p>รันกฎตัดสินใจและการคำนวณ lead time บนข้อมูลจำลองบนเซิร์ฟเวอร์ (ไม่ใช้ TensorFlow: ใช้ label เป็นค่า GRU จึงทดสอบเส้นทางของโค้ด ไม่ใช่ความแม่นยำของโมเดล)</p>
+  <button id="run">รัน self-test</button><span id="status"></span>
+  <pre id="out" hidden></pre>
+
+  <h2>สคริปต์</h2>
+  <table>
+    <tr><th>ไฟล์</th><th>หน้าที่</th></tr>
+    <tr><td><code>loso.py</code></td><td>LOSO / video-independent / random split และตารางเปรียบเทียบ</td></tr>
+    <tr><td><code>lead_time.py</code></td><td>เวลาเตือนล่วงหน้าก่อนกระแทก (ms)</td></tr>
+    <tr><td><code>ablation.py</code></td><td>ablation ของกฎเสริม, ความไวของ threshold, เลือก threshold แบบ LOSO</td></tr>
+    <tr><td><code>benchmark_edge.py</code></td><td>latency / FPS / RAM บน Raspberry Pi 5 หรือ Jetson</td></tr>
+    <tr><td><code>prepare_open_data.py</code></td><td>แปลงชุดข้อมูลเปิด (OmniFall, URFD) เป็น frames.csv / trials.csv</td></tr>
+  </table>
+  <p>การ train GRU และการดึง landmark ต้องรันบนเครื่องของคุณ: <code>pip install -r requirements-full.txt</code> แล้วดู README ใน <a href="https://github.com/chayuton/fallriskpredict">GitHub</a></p>
+</main>
+<script>
+  const btn = document.getElementById('run'), st = document.getElementById('status'), out = document.getElementById('out');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; st.className = ''; st.textContent = 'กำลังรัน…'; out.hidden = true;
+    try {
+      const r = await fetch('/api/selftest?subjects=2', { cache: 'no-store' });
+      const j = await r.json();
+      const ok = r.ok && j.status === 'ok';
+      st.className = ok ? 'ok' : 'bad';
+      st.textContent = ok ? `ผ่าน (${j.runtime_s} s)` : 'ไม่ผ่าน';
+      out.textContent = JSON.stringify(j, null, 2); out.hidden = false;
+    } catch (e) {
+      st.className = 'bad'; st.textContent = 'เรียก API ไม่ได้: ' + e;
+    } finally { btn.disabled = false; }
+  });
+</script>
+</body>
+</html>

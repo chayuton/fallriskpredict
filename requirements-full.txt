@@ -1,0 +1,9 @@
+numpy
+pandas
+scikit-learn
+scipy
+matplotlib
+tensorflow        # on Raspberry Pi / Jetson: tensorflow or tflite-runtime (for .tflite models)
+psutil            # benchmark_edge.py
+opencv-python     # benchmark_edge.py
+mediapipe         # benchmark_edge.py

@@ -14,7 +14,7 @@
 | `make_demo_data.py` | สร้างข้อมูลจำลองไว้ทดลองรันเท่านั้น (ตัวเลขที่ได้ไม่มีความหมาย) | – |
 | `prepare_open_data.py` | แปลงชุดข้อมูลเปิด (OmniFall: UP-Fall, CMDFall, CAUCAFall, Le2i, GMDCSA24 …, URFD) เป็น frames.csv / trials.csv ดู **README_open_data.md** | R1 ข้อ 1, R2 ข้อ 1, 4 |
 
-ติดตั้ง: `pip install -r requirements.txt` (โค้ดทดสอบแล้วกับ Python 3.13, TensorFlow 2.21 / Keras 3, MediaPipe 0.10.32)
+ติดตั้ง: `pip install -r requirements-full.txt` (โค้ดทดสอบแล้วกับ Python 3.13, TensorFlow 2.21 / Keras 3, MediaPipe 0.10.32)
 
 ---
 

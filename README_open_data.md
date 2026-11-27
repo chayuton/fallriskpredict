@@ -19,7 +19,7 @@
 | **UP-Fall** | 17 คน (18–24 ปี) | 2 กล้อง, 18 fps, 640×480 | ล้ม 5 แบบ, ADL 6 แบบ, อย่างละ 3 ครั้ง | ผ่าน OmniFall | เว็บไซต์ HAR-UP (Google Sites) ทั้งชุดใหญ่มาก ให้โหลดเฉพาะข้อมูลกล้อง |
 | **CMDFall** | 50 คน (21–40 ปี) | 7 Kinect, 20 fps, 640×480 | ล้ม 8 แบบ, ADL 12 แบบ ในวิดีโอต่อเนื่อง | ผ่าน OmniFall (ใช้ `--mode events`) | อีเมลขอผู้จัดทำ (MICA), ฟรีเพื่อการวิจัย |
 | **CAUCAFall** | 10 คน (หลายช่วงอายุ ไม่ระบุช่วง) | 1 กล้อง IR, 23 fps | ล้ม 5 แบบ, ADL 5 แบบ | label ราย frame (fall/nofall) + OmniFall | Mendeley Data, CC BY 4.0 |
-| **GMDCSA24** | 4 คน | webcam 30 fps, 720p | ล้ม 81, ADL 79 คลิป | CSV เวลาเริ่ม/จบ + OmniFall | Zenodo 10.5281/zenodo.13354453, CC BY 4.0 |
+| **GMDCSA24** | 4 คน | webcam 30 fps (บางคลิป 15 fps), 720p | ล้ม 79, ADL 81 คลิป | CSV เวลาเริ่ม/จบ + OmniFall | GitHub (MIT License) / Zenodo 10.5281/zenodo.13354453 **เตรียมครบทุกขั้นแล้ว ดู `datasets/gmdcsa24/`** |
 | **Le2i (ImViA)** | 9 คน | 25 fps, 320×240 | ล้ม 143, ADL 79 | เฟรมเริ่ม/จบการล้ม + OmniFall | search-data.ubfc.fr (ลิงก์จากหน้า OmniFall), เหมาะเป็นชุดทดสอบภายนอก |
 | **URFD** | 5 คน | Kinect 30 fps, 640×480 | ล้ม 30, ADL 40 | ราย frame: −1 ไม่นอน, 0 กำลังล้ม, 1 นอนกับพื้น | ดาวน์โหลดตรง, CC BY-NC-SA 4.0, **ไม่มีรหัสผู้ทดลองราย sequence** → ใช้ทดสอบภายนอกเท่านั้น |
 | **SAFER-Activities** (2026) | 46 คน (18–58 ปี) | หลายกล้อง | การล้ม 5,406 ครั้ง, 30 คลาส รวมผู้ใช้วีลแชร์ | ราย frame, split ตามผู้ทดลอง | Hugging Face, CC BY-NC-SA 4.0, ต้องเขียน `segments.csv` เอง |
@@ -32,6 +32,32 @@
 นิยาม label ของ OmniFall: ช่วง `fall` เริ่มที่เฟรมแรกที่ท่าทางเริ่มต่างจากกิจกรรมก่อนหน้า และ**จบเมื่อการเคลื่อนที่จากแรงเฉื่อยหยุด ไม่ใช่ตอนกระทบพื้น** จึงใช้ต้นช่วงเป็น onset ได้ แต่ต้องหาเฟรมกระแทกเพิ่ม
 
 ## 3. แปลงข้อมูลด้วย `prepare_open_data.py`
+
+### ดาวน์โหลดอัตโนมัติ (`get_public_data.py`)
+
+```bash
+pip install huggingface_hub
+python get_public_data.py                 # URFD (วิดีโอกล้อง 0 + label) และ label ของ OmniFall ลงโฟลเดอร์ public_data/
+python get_public_data.py --only urfd     # หรือ --only omnifall, เปลี่ยนโฟลเดอร์ด้วย --out
+```
+
+สั่งซ้ำได้ ไฟล์ที่โหลดครบแล้วจะข้ามไป เมื่อเสร็จสคริปต์จะพิมพ์คำสั่งแปลงข้อมูลขั้นต่อไปให้ ชุดที่ต้องขอสิทธิ์หรือโหลดจากเว็บไซต์ (UP-Fall, CMDFall, CAUCAFall, Le2i, SFU, ETRI, Toyota, MUVIM) ยังต้องดาวน์โหลดเอง
+
+### GMDCSA24: สคริปต์เตรียมครบทุกขั้น (`datasets/gmdcsa24/`)
+
+```bash
+git clone https://github.com/ekramalam/gmdcsa24-a-dataset-for-human-fall-detection-in-videos data/raw/gmdcsa24
+python datasets/gmdcsa24/gmdcsa24_labels.py data/raw/gmdcsa24 data/gmdcsa24   # manifest.csv + segments.csv
+python prepare_open_data.py extract --dir data/gmdcsa24                        # MediaPipe รุ่นใหม่: เพิ่ม --pose-model pose_landmarker_full.task
+python datasets/gmdcsa24/build_gmdcsa24_bundle.py label                        # 30 fps, impact, label, trials, ภาพตรวจ
+python datasets/gmdcsa24/build_gmdcsa24_bundle.py train                        # GRU อ้างอิงแบบ LOSO -> predictions
+python datasets/gmdcsa24/build_gmdcsa24_bundle.py verify                       # วิเคราะห์ด้วย engine เดียวกับเว็บแอป
+python datasets/gmdcsa24/build_gmdcsa24_bundle.py package --videos data/raw/gmdcsa24
+```
+
+ได้ `results/gmdcsa24_upload_bundle.zip`: frames / trials / predictions สำหรับเว็บแอป, landmark ครบ 33 จุด, label, ภาพตรวจจุดกระแทก และผลอ้างอิง รายละเอียดและข้อควรระวังอยู่ใน `datasets/gmdcsa24/README_TH.md`
+
+ชุดนี้ไม่มีเวลากระแทกมาให้ จึงนิยาม impact = เฟรมแรกที่มือ เข่า สะโพก หรือหลังแตะพื้น (หรือเตียง) ซึ่งเร็วกว่านิยาม "ลำตัวกระทบพื้น" ของ KFall ในการล้มที่ค่อยๆ ย่อลง lead time จึงสั้นกว่า ค่าที่ได้จากท่าทางมักช้ากว่าภาพจริงในการล้มแบบนี้ จึงดูภาพครบทุกคลิปใน trials (69 คลิป) และแก้ 31 คลิปไว้ใน `MANUAL_IMPACT_S` ของ `build_gmdcsa24_bundle.py` ผู้วิจัยยังต้องยืนยันก่อนตีพิมพ์ ถ้าบทความใช้นิยามอื่นให้แก้ค่าในตารางนั้นแล้วสั่ง `label` ใหม่
 
 ### ตัวอย่าง: UP-Fall ผ่าน OmniFall
 

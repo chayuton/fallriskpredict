@@ -13,6 +13,8 @@
 | `data.py`, `decision.py`, `model.py`, `utils.py` | โมดูลที่สคริปต์ข้างบนเรียกใช้ | – |
 | `make_demo_data.py` | สร้างข้อมูลจำลองไว้ทดลองรันเท่านั้น (ตัวเลขที่ได้ไม่มีความหมาย) | – |
 | `prepare_open_data.py` | แปลงชุดข้อมูลเปิด (OmniFall: UP-Fall, CMDFall, CAUCAFall, Le2i, GMDCSA24 …, URFD) เป็น frames.csv / trials.csv ดู **README_open_data.md** | R1 ข้อ 1, R2 ข้อ 1, 4 |
+| `get_public_data.py` | ดาวน์โหลด URFD และ label ของ OmniFall อัตโนมัติ แล้วพิมพ์คำสั่งแปลงข้อมูลขั้นต่อไป | R1 ข้อ 1, R2 ข้อ 1 |
+| `datasets/gmdcsa24/` | สร้างชุด GMDCSA24 พร้อมอัปโหลดเข้าเว็บแอป (frames, trials, predictions แบบ LOSO, ภาพตรวจจุดกระแทก) ดู `datasets/gmdcsa24/README_TH.md` | R1 ข้อ 1–2, R2 ข้อ 1–2 |
 
 ## เว็บแอป (https://fallriskpredict.vercel.app)
 
